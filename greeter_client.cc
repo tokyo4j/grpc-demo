@@ -16,6 +16,7 @@
  *
  */
 
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -38,10 +39,16 @@ class GreeterClient {
 
     // Assembles the client's payload, sends it and presents the response back
     // from the server.
-    std::string SayHello(const std::string &user) {
+    std::pair<std::string, int> SayHello(const std::string &user) {
         // Data we are sending to the server.
         HelloRequest request;
         request.set_name(user);
+
+        std::ifstream ifs("fuji.jpeg");
+        std::stringstream ss;
+        ss << ifs.rdbuf();
+
+        request.set_data(ss.str());
 
         // Container for the data we expect from the server.
         HelloReply reply;
@@ -55,11 +62,11 @@ class GreeterClient {
 
         // Act upon its status.
         if (status.ok()) {
-            return reply.message();
+            return std::make_pair(reply.message(), reply.len());
         } else {
             std::cout << status.error_code() << ": " << status.error_message()
                       << std::endl;
-            return "RPC failed";
+            return std::make_pair("RPC failed", -1);
         }
     }
 
@@ -77,8 +84,8 @@ int main(int argc, char **argv) {
     GreeterClient greeter(grpc::CreateChannel(
         "localhost:50051", grpc::InsecureChannelCredentials()));
     std::string user("world");
-    std::string reply = greeter.SayHello(user);
-    std::cout << "Greeter received: " << reply << std::endl;
+    auto [msg, len] = greeter.SayHello(user);
+    std::cout << "Greeter received: " << msg << "," << len << std::endl;
 
     return 0;
 }
